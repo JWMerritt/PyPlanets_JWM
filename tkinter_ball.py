@@ -43,7 +43,7 @@ class WinCanvas():
             # the advantage here is that we avoid the time.sleep() command, which would prevent
             #   us from otherwise interacting with the window.
             if time.time()-dt > StartFrame:
-                self.Ball.timestep(dt=self.dt)
+                self.Ball.timestep(dt=dt)
                 break
         self.Window.update()
 
@@ -103,7 +103,7 @@ class Phys_Grav():
         self.accel = g
     
     def evol(self, position, velocity, dt):
-        OutPos = position + dt*veolcity * 0.5*self.accel*dt*dt
+        OutPos = position + dt*velocity * 0.5*self.accel*dt*dt
         OutVel = velocity + dt*self.accel
         return OutPos, OutVel
 
@@ -208,7 +208,7 @@ class Ball():
 
 
     def timestep(self, dt):
-        TryPos, TryVel = self.PhysEngine.evol(self.position,self.velocity,dt) # where the ball would go, uninterrupted.
+        TryPos, TryVel = self.PhysEngine.evol(position=self.position, velocity=self.velocity, dt=dt) # where the ball would go, uninterrupted.
         # Bounds of the ball:
         right = TryPos[0] + self.radius
         left = TryPos[0] - self.radius

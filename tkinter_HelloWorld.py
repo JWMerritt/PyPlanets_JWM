@@ -16,7 +16,7 @@ print(f"some text, and {screen_height}")
 
 root.resizable(True,False)
     # root can now be resized horizontally, but not vertically
-root.iconbitmap("./fun/Excl.ico")
+root.iconbitmap("./Excl.ico")
     # root now has this picture as it's icon.
 
 message = tk.Label(root, text="Hello World!")
