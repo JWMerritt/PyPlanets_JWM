@@ -1,15 +1,16 @@
 import pygame
-import PyPlanets as ppl
+from PyPlanets import *
 import numpy as np
 
 ScreenSize = (500,500)
 BGColor = (55,55,55)
 FPS = 60
 
+
 pygame.init()
 DISPLAYSURF = pygame.display.set_mode(ScreenSize)
 DISPLAYSURF.fill(BGColor)
-logo = pygame.image.load("C:/Users/jmerr/Documents/Python/Fun/Excl.ico")
+logo = pygame.image.load("./Excl.ico")
 pygame.display.set_icon(logo)
 pygame.display.set_caption("Planets Test Lab.")
 pygame.display.update()
@@ -98,7 +99,7 @@ print(vec_coords)
 
 RUNNING = False
 
-arw = VectArrow(DISPLAYSURF)
+arw = VectArrow2(DISPLAYSURF,Camera)
 arw.tail = np.array([200,400])
 arw.tip = np.array([300,300])
 
