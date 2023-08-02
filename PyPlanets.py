@@ -4,58 +4,73 @@ import pygame
 import numpy as np
 from itertools import combinations
 
+
+def ppl_atan(point):
+    """Advanced arctangent of a tuple point."""
+    if point[0]==0:
+        if point[1]>0:
+            return np.pi
+        else:
+            return -np.pi
+    elif point[0]<0:
+        return np.arctan(point[1]/point[0])+np.pi
+    else:
+        return np.arctan(point[1]/point[0])
+
+
+def rot_mat(theta):
+    return np.array([[np.cos(theta),np.sin(theta)],[-np.sin(theta),np.cos(theta)]])
+
+
+def numpy_to_tuples(np_in):
+    listout = []
+    for point in np_in:
+        listout.append( (point[0],point[1]) )
+    return listout
+
+
+##################
+
+
 class CameraRig():
     """
-    Contains details of camera position / zoom, and useful functions
+    Contains details of camera position / zoom, and functions for converting between Real/Image/Screen space.
+    Real space is the coordinates that the physics simulation uses. 
     """
 
-    #   Zoom stuff:
-    PanPosition = np.array([0,0])
-    #   -This is the real-space displacement vector that we get from the user panning the screen
-    #     The current CameraPosition in real-space is equal to an origin plus the PanPosition.
-    #     When we are not focused on a planet, the origin is ([0,0]); otherwise, the origin 
-    #     is at the center of the planet we are following.
-    CameraZoom = 10    
-    #   -At CZ=1, one real unit is equal to one pixel. Larger zooms => farther out
-    #       RealDistance*CameraZoom = ScreenDistance
-    CameraZoomLinear = 1    
-    #   -The CameraZoom will be 10**CameraZoomLinear
-    ScreenSize = (500,500)
-    #   -Size of the screen, in pixels
-    ScreenDisplacement = (250,250)
-    #   -This is the displacement of the screen-center from the top-left corner of the box.
-    VelocityRatio = 1
-    #   -When showing / changing a Planet's velocity on-screen, the actual
-    #       velocity will be what's shown, times this factor.
+    PanPosition = np.array([0,0]) # Real-space displacement vector; CameraPosition = OriginOpsition + PanPosition
+
+    CameraZoom = 25 # RealDistance * CameraZoom = ScreenDistance. Smaller number => smaller when drawn on screen
+
+    CameraZoomLinear = 1 # CameraZoom = 10**CameraZoomLinear
+
+    VelocityRatio = 1 # ScreenArrowSize = ActualVelocitySize * VelocityRatio
+
     FollowingPlanet = False
-    #   -Is the camera following a planet?
-    FocusPlanet = False
-    #   -The planet we're focused on.
 
-
-    ########################    Initialization code
+    FocusPlanet = False # When FollowingPlanet==True, this will point to the planet we're following
 
 
     def __init__(self, ScreenSize):
         """Initializes CameraRig using the screen size (as a tuple)."""
         # should be updated if the screen gets resized
         self.ScreenSize = ScreenSize
-        self.ScreenDisplacement = (ScreenSize[0]/2, ScreenSize[1]/2)
+        self.ScreenCenterDisplacement = (ScreenSize[0]/2, ScreenSize[1]/2)
 
 
     def get_screen(self, real_coords=np.array([0,0])):
-        """Given the real coordinates, find the screen (image) coordinates."""
+        """Returns Screen coordinates from Real coordinates"""
         CameraPosition = self.get_camera_position()
-        ScreenX = self.ScreenDisplacement[0] + self.CameraZoom*(real_coords[0]-CameraPosition[0])
-        ScreenY = self.ScreenDisplacement[1] - self.CameraZoom*(real_coords[1]-CameraPosition[1])
+        ScreenX = self.ScreenCenterDisplacement[0] + self.CameraZoom*(real_coords[0]-CameraPosition[0])
+        ScreenY = self.ScreenCenterDisplacement[1] - self.CameraZoom*(real_coords[1]-CameraPosition[1])
         return (ScreenX, ScreenY)
 
 
     def get_real(self, screen_coords=(0,0)):
-        """given the screen (image) coordinates, find the real coordinates."""
+        """Returns the Real coordinates from Screen coordinates."""
         CameraPosition = self.get_camera_position()
-        RealX = (screen_coords[0] - self.ScreenDisplacement[0])/self.CameraZoom + CameraPosition[0]
-        RealY = -(screen_coords[1] - self.ScreenDisplacement[1])/self.CameraZoom + CameraPosition[1]
+        RealX = (screen_coords[0] - self.ScreenCenterDisplacement[0])/self.CameraZoom + CameraPosition[0]
+        RealY = -(screen_coords[1] - self.ScreenCenterDisplacement[1])/self.CameraZoom + CameraPosition[1]
         return np.array([RealX, RealY])
 
 
@@ -77,8 +92,7 @@ class CameraRig():
             self.PanPosition = self.PanPosition + self.FocusPlanet.position
         self.FocusPlanet = False
 
-
-
+ 
     ########################    Pan & Zoom code
 
 
@@ -106,10 +120,7 @@ class CameraRig():
 
 class Planet():
     """
-    Planet Class - represents planet in the simulation
-    methods:
-        draw(self, Surface, CameraPosition, CameraZoom, ScreenDisplacement):
-            Draws planet to Surface, given CameraRig data
+    Planet Class - represents a planet in the simulation.
     """
     position = np.array([0,0])
     velocity = np.array([0,0])
@@ -162,6 +173,8 @@ class Planet():
 #################################################
 #################################################
 
+highlight_upperright_default = np.array([[7,10],[10,10],[10,7],[9,7],[9,9],[7,9]])/10
+
 class PlanetList():
     """
     Object to hold the list of planets.
@@ -172,18 +185,12 @@ class PlanetList():
     defaultRadius = 1
     defaultMass = 100
 
-    List = {}
-    #   -dict of planets
+    List = {} # dict of planets
     SelectionActive = False
-    #   -do we have a planet selected?
     CurrentSelection = 0
-    #   -ID of currently selected planet
     MovingVector = False
-    #   -are we dragging around the velocity arrow?
     MovingPlanet = False
-    #   -are we dragging around the planet?
     EditingText = False
-    #   -are we editing one of the text fields?
     TimeFlowing = False
     #   -is time flowing?
     Arrow = []
@@ -199,6 +206,13 @@ class PlanetList():
     ModDict = {"Neutral":4096, "LShift":4097, "LCtrl":4160, "LAlt":4352, "LShift+LCtrl":4161}
     #   -just here for convenience when dealing with modifier keys
 
+    highlight_color = (255,255,0)
+    highlight_upperright = np.array([[7,10],[10,10],[10,7],[9,7],[9,9],[7,9]])/10
+    highlight_upperleft = -np.matmul(np.array([[7,10],[10,10],[10,7],[9,7],[9,9],[7,9]])/10, np.array([[0,-1],[1,0]]))
+    highlight_lowerleft = -np.array([[7,10],[10,10],[10,7],[9,7],[9,9],[7,9]])/10
+    highlight_lowerright = np.matmul(np.array([[7,10],[10,10],[10,7],[9,7],[9,9],[7,9]])/10, np.array([[0,-1],[1,0]]))
+
+    
     ########################    init
 
 
@@ -432,6 +446,22 @@ class PlanetList():
         return DrawList
 
 
+    def highlight_screen_position(self, coords_in):
+        """This should not be called if we are not following a planet."""
+        real_coords = self.Camera.FocusPlanet.radius*coords_in + self.Camera.FocusPlanet.position
+        screen_coords = []
+        for position in real_coords:
+            screen_coords.append(self.Camera.get_screen(position))
+        return screen_coords
+
+    def draw_highlight(self):
+        if self.Camera.FollowingPlanet:
+            pygame.draw.polygon(self.Surface, self.highlight_color, self.highlight_screen_position(self.highlight_upperright))
+            pygame.draw.polygon(self.Surface, self.highlight_color, self.highlight_screen_position(self.highlight_upperleft))
+            pygame.draw.polygon(self.Surface, self.highlight_color, self.highlight_screen_position(self.highlight_lowerright))
+            pygame.draw.polygon(self.Surface, self.highlight_color, self.highlight_screen_position(self.highlight_lowerleft))
+
+
 #################################################
 #################################################
 #################################################
@@ -632,29 +662,6 @@ class TextListHandler():
 #################################################
 #################################################
 
-def ppl_atan(point):
-    """Advanced arctangent of a tuple point."""
-    if point[0]==0:
-        if point[1]>0:
-            return np.pi
-        else:
-            return -np.pi
-    elif point[0]<0:
-        return np.arctan(point[1]/point[0])+np.pi
-    else:
-        return np.arctan(point[1]/point[0])
-
-
-def rot_mat(theta):
-    return np.array([[np.cos(theta),np.sin(theta)],[-np.sin(theta),np.cos(theta)]])
-
-
-def numpy_to_tuples(np_in):
-    listout = []
-    for point in np_in:
-        listout.append( (point[0],point[1]) )
-    return listout
-
 
 class VectArrow():
     # Flat tail:
@@ -708,7 +715,7 @@ def main(ScreenSize=(500,500)):
     pygame.init()
     DISPLAYSURF = pygame.display.set_mode(ScreenSize)
     DISPLAYSURF.fill(BGColor)
-    logo = pygame.image.load("./Excl.ico")
+    logo = pygame.image.load("./Planets.ico")
     pygame.display.set_icon(logo)
     pygame.display.set_caption("!!! Planets !!!")
     pygame.display.update()
@@ -809,6 +816,7 @@ def main(ScreenSize=(500,500)):
         # render the result:
         DISPLAYSURF.fill(BGColor)
         mainPlanetList.draw()
+        mainPlanetList.draw_highlight()
         TimeLight.draw(DISPLAYSURF, mainPlanetList.TimeFlowing)
         TextListObj.draw(DISPLAYSURF, TextCurrent)
         pygame.display.update()
