@@ -719,7 +719,7 @@ def main(ScreenSize=(500,500)):
     DISPLAYSURF.fill(BGColor)
     logo = pygame.image.load("./Planets.ico")
     pygame.display.set_icon(logo)
-    pygame.display.set_caption("!!! Planets !!!")
+    pygame.display.set_caption("PyPlanets")
     pygame.display.update()
 
     Camera = CameraRig(ScreenSize)
