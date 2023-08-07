@@ -19,10 +19,12 @@ def ppl_atan(point):
 
 
 def rot_mat(theta):
+    """Returns a 2-by-2 rotation matrix with an angle theta."""
     return np.array([[np.cos(theta),np.sin(theta)],[-np.sin(theta),np.cos(theta)]])
 
 
 def numpy_to_tuples(np_in):
+    """Takes an N-by-2 numpy matrix and converts it into a list of N tuples."""
     listout = []
     for point in np_in:
         listout.append( (point[0],point[1]) )
