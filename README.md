@@ -1,5 +1,6 @@
 # PyPlanets_JWM
 A small Python project using PyGame. A simulation of Newtonian dynamics. Requires PyGame and Numpy.
+The app can be started by using `PyPlanets.main(ScreenSize=(width,height))`.
 
 ## Simple controls
 
